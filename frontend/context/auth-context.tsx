@@ -1,0 +1,131 @@
+'use client';
+
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from '@/lib/api';
+import { useToast } from '@/components/ui/use-toast';
+import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
+
+interface User {
+  id: string;
+  email: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = Cookies.get('token');
+    if (token) {
+      verifyToken();
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const verifyToken = async () => {
+    try {
+      const response = await api.get('/api/auth/verify');
+      setUser(response.data.user);
+    } catch (error) {
+      Cookies.remove('token');
+      router.push('/login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await api.post('/api/auth/login', { email, password });
+      const { token, user } = response.data;
+      Cookies.set('token', token, { expires: 1 }); // Expires in 1 day
+      setUser(user);
+      toast({
+        title: 'Success',
+        description: 'Logged in successfully',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.response?.data?.details || error?.response?.data?.error || error.message || 'Login failed';
+      toast({
+        title: 'Error',
+        description: msg,
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const register = async (email: string, password: string) => {
+    try {
+      const response = await api.post('/api/auth/register', {
+        email,
+        password,
+      });
+      const { token, user } = response.data;
+      Cookies.set('token', token, { expires: 1 }); // Expires in 1 day
+      setUser(user);
+      toast({
+        title: 'Success',
+        description: 'Account created successfully',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.response?.data?.details || error?.response?.data?.error || error.message || 'Registration failed';
+      toast({
+        title: 'Error',
+        description: msg,
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    Cookies.remove('token');
+    setUser(null);
+    toast({
+      title: 'Success',
+      description: 'Logged out successfully',
+    });
+    router.push('/login');
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        register,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}; 
