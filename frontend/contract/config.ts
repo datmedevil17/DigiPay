@@ -1,10 +1,9 @@
-import { createConfig, http } from '@wagmi/core'
-import { mainnet, sepolia } from '@wagmi/core/chains'
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { sepolia } from 'wagmi/chains';
 
-export const config = createConfig({
-  chains: [mainnet, sepolia],
-  transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
-  },
-})
+export const config = getDefaultConfig({
+  appName: 'DigiPay',
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'your_walletconnect_project_id_here',
+  chains: [sepolia],
+  ssr: true,
+});

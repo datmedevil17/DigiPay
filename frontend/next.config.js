@@ -1,12 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {}, // Add empty turbopack config to silence warning
+  turbopack: {}, 
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       path: false,
     };
+    
+    // Exclude test files from the build
+    config.externals = [
+      ...(config.externals || []),
+      {
+        'tap': 'tap',
+        'tape': 'tape',
+        'fastbench': 'fastbench',
+        'desm': 'desm',
+        'why-is-node-running': 'why-is-node-running',
+        'pino-elasticsearch': 'pino-elasticsearch',
+      }
+    ];
+
     return config;
   },
   // Configure remote image patterns

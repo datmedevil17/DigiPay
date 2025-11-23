@@ -17,8 +17,9 @@ import { useToast } from '@/hooks/use-toast'
 import { useProperties } from '@/hooks/use-properties'
 import { Toaster } from '@/components/ui/toaster';
 import { Plus, Upload } from 'lucide-react';
-import { listProperty, parseEther } from '@/contract/functions';
+import { listProperty, parseEther, isWalletConnected } from '@/contract/functions';
 import { uploadToIpfs } from '@/contract/pinata';
+import { useAccount } from 'wagmi';
 
 interface CreatePropertyModalProps {
   onPropertyCreated?: () => void;
@@ -32,6 +33,7 @@ export function CreatePropertyModal({ onPropertyCreated }: CreatePropertyModalPr
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { mutate } = useProperties();
+  const { isConnected } = useAccount();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -58,6 +60,16 @@ export function CreatePropertyModal({ onPropertyCreated }: CreatePropertyModalPr
     setIsLoading(true);
 
     try {
+      // Check wallet connection first
+      if (!isConnected) {
+        toast({
+          title: "Wallet Not Connected",
+          description: "Please connect your wallet to create a property.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Validate required fields
       if (!formData.name || !formData.location || !formData.type || !formData.total_shares || !formData.price_per_share || !formData.rental_yield) {
         toast({
